@@ -1,20 +1,24 @@
 package com.example.demo.kafka;
 
 import lombok.RequiredArgsConstructor;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.annotation.Resource;
 
 @RestController
 @RequiredArgsConstructor
 public class KafkaController {
+    @Resource(name = "kafkaTemplate")
     private final KafkaTemplate<String, String> kafkaTemplate;
+
+    @Resource(name = "corpKafkaTemplate")
+    private final KafkaTemplate<String, CorpMessage> corpKafkaTemplate;
 
     @Value(value = "${spring.kafka.template.default-topic}")
     private String topic;
@@ -31,9 +35,10 @@ public class KafkaController {
         });
     }
 
-    @PostMapping
-    public String receive() {
-        ConsumerRecord<String, String> result = kafkaTemplate.receive("standby", 1, (short) 1);
-        return result.value();
+    @GetMapping("/corp/{name}/{msg}")
+    public void sendCorpMessage(@PathVariable String name, @PathVariable String msg) {
+        ListenableFuture<SendResult<String, CorpMessage>> future = corpKafkaTemplate.send(topic, new CorpMessage(name, msg));
+        future.completable().whenComplete((result, ex) -> {
+        });
     }
 }

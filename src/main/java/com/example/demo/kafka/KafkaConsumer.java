@@ -11,11 +11,26 @@ import org.springframework.stereotype.Component;
 @Component
 public class KafkaConsumer {
 
-    @KafkaListener(topics = "standby")
+    @KafkaListener(
+            topics = "standby",
+            containerFactory = "fooKafkaListenerContainerFactory")
     public void listenWithHeaders(
             @Payload String message,
             @Header(KafkaHeaders.RECEIVED_PARTITION_ID) int partition) {
-        System.out.println(
-                "Received Message: " + message + " from partition: " + partition);
+        System.out.println("Received Message: " + message + " from partition: " + partition);
+    }
+
+    @KafkaListener(
+            topics = "standby",
+            containerFactory = "barKafkaListenerContainerFactory")
+    public void listenWithFilter(String message) {
+        System.out.println("Received Message in filtered listener: " + message);
+    }
+
+    @KafkaListener(
+            topics = "standby",
+            containerFactory = "corpKafkaListenerContainerFactory")
+    public void CorpMessagelistener(CorpMessage message) {
+        System.out.println("corp name : " + message.getName() + ", corp message : " + message.getMsg());
     }
 }

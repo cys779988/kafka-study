@@ -10,6 +10,7 @@ import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.support.LogIfLevelEnabled;
+import org.springframework.kafka.support.serializer.JsonDeserializer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,26 +24,45 @@ public class KafkaConsumerConfig {
 
     public ConsumerFactory<String, String> consumerFactory(String groupId) {
         Map<String, Object> props = new HashMap<>();
-        props.put(
-                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
-                bootstrapAddress);
-        props.put(
-                ConsumerConfig.GROUP_ID_CONFIG,
-                groupId);
-        props.put(
-                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
-                StringDeserializer.class);
-        props.put(
-                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-                StringDeserializer.class);
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         return new DefaultKafkaConsumerFactory<>(props);
     }
 
-    public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(String groupId) {
+    public ConsumerFactory<String, CorpMessage> corpConsumerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "corp");
+        return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), new JsonDeserializer<>(CorpMessage.class));
+    }
 
-        ConcurrentKafkaListenerContainerFactory<String, String> factory =
-                new ConcurrentKafkaListenerContainerFactory<>();
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, CorpMessage> corpKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, CorpMessage> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(corpConsumerFactory());
+        factory.getContainerProperties().setCommitLogLevel(LogIfLevelEnabled.Level.DEBUG);
+        factory.getContainerProperties().setMissingTopicsFatal(false);
+        return factory;
+    }
+
+    public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(String groupId) {
+        ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory(groupId));
+        factory.getContainerProperties().setCommitLogLevel(LogIfLevelEnabled.Level.DEBUG);
+        factory.getContainerProperties().setMissingTopicsFatal(false);
+        return factory;
+    }
+
+    /*
+    * 필터와 일치하는 메시지는 삭제
+    * */
+    public ConcurrentKafkaListenerContainerFactory<String, String> filterKafkaListenerContainerFactory(String groupId) {
+        ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(consumerFactory(groupId));
+        factory.setRecordFilterStrategy(
+                record -> record.value().contains("standby"));
         factory.getContainerProperties().setCommitLogLevel(LogIfLevelEnabled.Level.DEBUG);
         factory.getContainerProperties().setMissingTopicsFatal(false);
         return factory;
@@ -51,5 +71,10 @@ public class KafkaConsumerConfig {
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, String> fooKafkaListenerContainerFactory() {
         return kafkaListenerContainerFactory("foo");
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, String> barKafkaListenerContainerFactory() {
+        return filterKafkaListenerContainerFactory("bar");
     }
 }
