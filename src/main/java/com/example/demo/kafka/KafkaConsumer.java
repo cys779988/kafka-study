@@ -30,7 +30,7 @@ public class KafkaConsumer {
     @KafkaListener(
             topics = "standby",
             containerFactory = "corpKafkaListenerContainerFactory")
-    public void CorpMessagelistener(CorpMessage message) {
+    public void corpMessagelistener(CorpMessage message) {
         System.out.println("corp name : " + message.getName() + ", corp message : " + message.getMsg());
     }
 }

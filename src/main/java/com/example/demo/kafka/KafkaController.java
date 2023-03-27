@@ -20,6 +20,9 @@ public class KafkaController {
     @Resource(name = "corpKafkaTemplate")
     private final KafkaTemplate<String, CorpMessage> corpKafkaTemplate;
 
+    @Resource(name = "multiTypeKafkaTemplate")
+    private final KafkaTemplate<String, Object> multiTypeKafkaTemplate;
+
     @Value(value = "${spring.kafka.template.default-topic}")
     private String topic;
 
@@ -37,8 +40,14 @@ public class KafkaController {
 
     @GetMapping("/corp/{name}/{msg}")
     public void sendCorpMessage(@PathVariable String name, @PathVariable String msg) {
-        ListenableFuture<SendResult<String, CorpMessage>> future = corpKafkaTemplate.send(topic, new CorpMessage(name, msg));
+        ListenableFuture<SendResult<String, CorpMessage>> future = corpKafkaTemplate.send("corp", new CorpMessage(name, msg));
         future.completable().whenComplete((result, ex) -> {
         });
+    }
+
+    @GetMapping("/multi/{name}/{msg}")
+    public void sendMultiTypeMessage(@PathVariable String name, @PathVariable String msg) {
+        multiTypeKafkaTemplate.send("multitype", new CorpMessage(name, msg));
+        multiTypeKafkaTemplate.send("multitype", new BranchMessage(name, msg));
     }
 }

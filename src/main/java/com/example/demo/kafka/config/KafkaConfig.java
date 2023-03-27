@@ -1,4 +1,4 @@
-package com.example.demo.kafka;
+package com.example.demo.kafka.config;
 
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.streams.StreamsConfig;
